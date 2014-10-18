@@ -129,10 +129,10 @@ elseif ns.myclass == "DEATHKNIGHT" then
 	ns.MergeList[52212] = 2  -- Death and Decay
 
 elseif ns.myclass == "ROGUE" then
-
-	ns.MergeList[2818]  = 3  -- Deadly Poison
-	ns.MergeList[8680]  = 3  -- Instant Poison
-
+	ns.MergeList[2818]  = 1  -- Deadly Poison
+	ns.MergeList[8680]  = 1  -- Wound Poison
+	ns.MergeList[51723] = 1  -- Fan of knives
+	ns.MergeList[121411]= 1  -- Crimson tempest dot
 end
 
 -- for attacks with 2 hits, for example whirlwind with 2 weapons.
@@ -160,7 +160,8 @@ ns.MergeOffhandList = {
 	
 	-- Rogue (Damage)
 	[122233] = 121411,		-- Crimson Tempest (DoT)
-	[2818]   = 113780,		-- Deadly Poison (DoT)
+	[113780] = 2818,		-- Deadly Poison (DoT)
+	[27576] = 5374,			-- Mutilate
 
 	-- Shaman (damage)
 	[45297]  = 421,   		-- Chain Lightning (Mastery)
