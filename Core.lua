@@ -127,16 +127,16 @@ local function ChatMsgLoot_Handler(msg)
 			s = s.." x 1"
 		end
 	
-		-- Items purchased seem to get to your bags faster than looted items
-		if bought then amount = 0 end
-	
-		-- Total items in bag (See comment above)
-		if config.itemstotal then
-			s = s.." ("..(GetItemCount(iI) + amount).. ")"
-		end
-	
 		-- Add the message
-		AbuCT3:AddMessage(s, r, g, b)
+		if config.itemstotal then
+			-- Delay it so we can read total count:
+			C_Timer.After(.2, function()
+				s = s.." ("..GetItemCount(iI).. ")"
+				AbuCT3:AddMessage(s, r, g, b)
+			end)
+		else
+			AbuCT3:AddMessage(s, r, g, b)
+		end
 	end
 end
 
