@@ -24,7 +24,6 @@ ns.config={
 	damagefont = "Fonts\\ARIALN.ttf",	-- "Fonts\\FRIZQT__.ttf" is default WoW damage font
 	damagefontsize = "16",				-- size of xCT damage font. use "auto" to set it automatically depending on icon size, or use own value, 16 for example. if it's set to number value icons will change size.
 	timevisible = 3, 					-- time (seconds) a single message will be visible. 3 is a good value.
-	scrollable = false,					-- allows you to scroll frame lines with mousewheel.
 	maxlines = 64,						-- max lines to keep in scrollable mode. more lines=more memory. nom nom nom.
 
 -- justify messages in frames, valid values are "RIGHT" "LEFT" "CENTER"

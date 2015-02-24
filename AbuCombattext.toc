@@ -5,6 +5,8 @@
 ## Version: 1
 ## RequiredDeps: Blizzard_CombatText
 
-config.lua
+libs/AbuTheLib.lua
+defaults.lua
+CONFIG.lua
 db.lua
 Core.lua
