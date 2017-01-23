@@ -28,6 +28,7 @@ end
 
 ns.MergeList = {
 	-- items (legendary cloaks)
+	[143924] = 4,  --吸血(合併+延遲顯示
 	[147891] = 3.1,   -- Legedary Cloak (Melee - dmg over 3s)
 	[148008] = 3.1,   -- Legedary Cloak (Caster - dmg over 3s)
 	[148009] = 4,   -- Legedary Cloak (Healer - heal over 10s)

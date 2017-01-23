@@ -18,7 +18,6 @@ local MergeList = ns.MergeList
 local BlackList = ns.BlackList
 local lowHealth, lowMana
 local BlankIcon = "Interface\\Addons\\AbuCombattext\\blank"
-local dmg, heal
 
 -- Number of frames
 local numf
@@ -43,6 +42,33 @@ local function LimitLines()
 	for i = 1, #ns.frames do
 		local f = ns.frames[i]
 		f:SetMaxLines(f:GetHeight() / config.fontsize)
+	end
+end
+
+-- scrollable frames
+local function SetScroll()
+	for i = 1, #ns.frames do
+		ns.frames[i]:EnableMouseWheel(true)
+		ns.frames[i]:SetScript("OnMouseWheel", function(self, delta)
+			if delta > 0 then
+				self:ScrollUp()
+			elseif delta < 0 then
+				self:ScrollDown()
+			end
+		end)
+	end
+end
+	
+-- msg flow direction
+local function ScrollDirection()
+	if COMBAT_TEXT_FLOAT_MODE == "2" then
+		ns.mode = "TOP"
+	else
+		ns.mode = "BOTTOM"
+	end
+	for i = 1, #ns.frames do
+		ns.frames[i]:Clear()
+		ns.frames[i]:SetInsertMode(ns.mode)
 	end
 end
 
@@ -104,8 +130,9 @@ local function ChatMsgLoot_Handler(msg)
 		-- Add the message
 		if config.itemstotal then
 			-- Delay it so we can read total count:
-			C_Timer.After(.5, function()
-				AbuCT3:AddMessage(s.." ("..GetItemCount(iI).. ")", r, g, b)
+			C_Timer.After(.2, function()
+				s = s.." ("..GetItemCount(iI).. ")"
+				AbuCT3:AddMessage(s, r, g, b)
 			end)
 		else
 			AbuCT3:AddMessage(s, r, g, b)
@@ -383,9 +410,12 @@ local function OnEvent(self, event, subevent, ...)
 		end
 
 	elseif event == "PLAYER_ENTERING_WORLD" then
-		SetUnit()
-		LimitLines()
-
+		SetUnit()    
+		if config.scrollable then
+			SetScroll()
+		else
+			LimitLines()
+		end
 		if config.damage or config.healing then
 			ns.pguid = UnitGUID("player")
 		end
@@ -403,7 +433,7 @@ ns.locked = true
 ns.frames = { }
 for i = 1, numf do
 	local f = CreateFrame("ScrollingMessageFrame", "AbuCT"..i, UIParent)
-	f:SetFont(config.font, config.fontsize, config.fontstyle)
+	--f:SetFont(config.font, config.fontsize, config.fontstyle)
 	f:SetShadowColor(0, 0, 0, 0)
 	f:SetFading(true)
 	f:SetFadeDuration(0.5)
@@ -418,25 +448,29 @@ for i = 1, numf do
 	f:SetClampedToScreen(true)
 	f:SetClampRectInsets(0, 0, config.fontsize, 0)
 	if i == 1 then
-		f:SetWidth(220)
-		f:SetHeight(300)
-		f:SetPoint("CENTER", -300, 0)
+		f:SetFont(config.font, config.fontsize, config.fontstyle)
+		f:SetWidth(200)
+		f:SetHeight(270)
 		f:SetJustifyH(config.justify_1)
+		f:SetPoint("CENTER", -750, 60)
 	elseif i == 2 then
-		f:SetWidth(220)
-		f:SetHeight(300)
-		f:SetPoint("CENTER", -530, 0)
+		f:SetFont(config.font, config.fontsize, config.fontstyle)
+		f:SetWidth(200)
+		f:SetHeight(270)
 		f:SetJustifyH(config.justify_2)
+		f:SetPoint("CENTER", -550, 60)
 	elseif i == 3 then
-		f:SetWidth(400)
+		f:SetFont(config.font, config.fontsize, config.fontstyle)
+		f:SetWidth(260)
 		f:SetHeight(128)
-		f:SetPoint("CENTER", 0, 230)
 		f:SetJustifyH(config.justify_3)
+		f:SetPoint("CENTER", 0, 256)
 	else
-		f:SetWidth(300)
-		f:SetHeight(300)
-		f:SetPoint("CENTER", 400, 0)
+		f:SetFont(config.damagefont, config.damagefontsize, config.fontstyle)
+		f:SetWidth(260)
+		f:SetHeight(360)
 		f:SetJustifyH(config.justify_4)
+		f:SetPoint("CENTER", 465, 80)
 		local a, _, c = f:GetFont()
 		if config.damagefontsize == "auto" then
 			if config.icons then
@@ -488,69 +522,80 @@ end
 -- hook blizz float mode selector. blizz sucks, because changing  cVar combatTextFloatMode doesn't fire CVAR_UPDATE
 --hooksecurefunc("InterfaceOptionsCombatTextPanelFCTDropDown_OnClick",ScrollDirection)
 --COMBAT_TEXT_SCROLL_ARC="" --may cause unexpected bugs, use with caution!
-InterfaceOptionsCombatTextPanelFCTDropDown:Hide() -- sorry, blizz fucking bug with SCM:SetInsertMode()
+--InterfaceOptionsCombatTextPanelFCTDropDown:Hide() -- sorry, blizz fucking bug with SCM:SetInsertMode()
+
+-- color printer
+local pr = function(msg)
+	print("AbuCT:", tostring(msg))
+end
 
 -- awesome configmode and testmode
 local StartConfigmode = function()
-	for i = 1, #ns.frames do
-		local f = ns.frames[i]
-		f:SetBackdrop( { bgFile   = "Interface/Tooltips/UI-Tooltip-Background",
-						 edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
-						 tile     = false,
-						 tileSize = 0,
-						 edgeSize = 2,
-						 insets = { left = 0, right = 0, top = 0, bottom = 0 }
-					   } )
-		f:SetBackdropColor(.1, .1, .1, .8)
-		f:SetBackdropBorderColor(.1, .1, .1, .5)
+	if not InCombatLockdown() then
+		for i = 1, #ns.frames do
+			local f = ns.frames[i]
+			f:SetBackdrop( { bgFile   = "Interface/Tooltips/UI-Tooltip-Background",
+							 edgeFile = "Interface/Tooltips/UI-Tooltip-Border",
+							 tile     = false,
+							 tileSize = 0,
+							 edgeSize = 2,
+							 insets = { left = 0, right = 0, top = 0, bottom = 0 }
+						   } )
+			f:SetBackdropColor(.1, .1, .1, .8)
+			f:SetBackdropBorderColor(.1, .1, .1, .5)
 
-		f.fs = f.fs or f:CreateFontString(nil, "OVERLAY")
-		f.fs:SetFont(config.font, config.fontsize, config.fontstyle)
-		f.fs:SetPoint("BOTTOM", f, "TOP", 0, 0)
-		if i == 1 then
-			f.fs:SetText(DAMAGE)
-			f.fs:SetTextColor(1, .1, .1, .9)
-		elseif i == 2 then
-			f.fs:SetText(SHOW_COMBAT_HEALING)
-			f.fs:SetTextColor(.1,1,.1,.9)
-		elseif i == 3 then
-			f.fs:SetText(COMBAT_TEXT_LABEL)
-			f.fs:SetTextColor(.1,.1,1,.9)
-		else
-			f.fs:SetText(SCORE_DAMAGE_DONE.." / "..SCORE_HEALING_DONE)
-			f.fs:SetTextColor(1,1,0,.9)
+			f.fs = f:CreateFontString(nil, "OVERLAY")
+			f.fs:SetFont(config.font, config.fontsize, config.fontstyle)
+			f.fs:SetPoint("BOTTOM", f, "TOP", 0, 0)
+			if i == 1 then
+				f.fs:SetText(DAMAGE)
+				f.fs:SetTextColor(1, .1, .1, .9)
+			elseif i == 2 then
+				f.fs:SetText(SHOW_COMBAT_HEALING)
+				f.fs:SetTextColor(.1,1,.1,.9)
+			elseif i == 3 then
+				f.fs:SetText(COMBAT_TEXT_LABEL)
+				f.fs:SetTextColor(.1,.1,1,.9)
+			else
+				f.fs:SetText(SCORE_DAMAGE_DONE.." / "..SCORE_HEALING_DONE)
+				f.fs:SetTextColor(1,1,0,.9)
+			end
+
+			f.t=f:CreateTexture"ARTWORK"
+			f.t:SetPoint("TOPLEFT", f, "TOPLEFT", 1, -1)
+			f.t:SetPoint("TOPRIGHT", f, "TOPRIGHT", -1, -19)
+			f.t:SetHeight(20)
+			f.t:SetTexture(.5, .5, .5)
+			f.t:SetAlpha(.3)
+
+			f.d=f:CreateTexture("ARTWORK")
+			f.d:SetHeight(16)
+			f.d:SetWidth(16)
+			f.d:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -1, 1)
+			f.d:SetTexture(.5, .5, .5)
+			f.d:SetAlpha(.3)
+
+			f.tr=f:CreateTitleRegion()
+			f.tr:SetPoint("TOPLEFT", f, "TOPLEFT", 0, 0)
+			f.tr:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, 0)
+			f.tr:SetHeight(20)
+
+			f:EnableMouse(true)
+			f:RegisterForDrag("LeftButton")
+			f:SetScript("OnDragStart", f.StartSizing)
+			if not config.scrollable then
+				f:SetScript("OnSizeChanged", function(self)
+						self:SetMaxLines(self:GetHeight() / config.fontsize)
+						self:Clear()
+					end)
+			end
+
+			f:SetScript("OnDragStop", f.StopMovingOrSizing)
+			ns.locked = false
 		end
-		f.fs:Show()
-
-		f.t = f.t or f:CreateTexture"ARTWORK"
-		f.t:SetPoint("TOPLEFT", f, "TOPLEFT", 1, -1)
-		f.t:SetPoint("TOPRIGHT", f, "TOPRIGHT", -1, -19)
-		f.t:SetHeight(20)
-		f.t:SetTexture(.5, .5, .5)
-		f.t:SetAlpha(.3)
-		f.t:Show()
-
-		f.d = f.d or f:CreateTexture("ARTWORK")
-		f.d:SetHeight(16)
-		f.d:SetWidth(16)
-		f.d:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -1, 1)
-		f.d:SetTexture(.5, .5, .5)
-		f.d:SetAlpha(.3)
-		f.d:Show()
-
-		f.tr = f.tr or f:CreateTitleRegion()
-		f.tr:SetPoint("TOPLEFT", f, "TOPLEFT", 0, 0)
-		f.tr:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, 0)
-		f.tr:SetHeight(20)
-
-		f:EnableMouse(true)
-		f:RegisterForDrag("LeftButton")
-		f:SetScript("OnDragStart", f.StartSizing)
-		f:SetScript("OnDragStop", f.StopMovingOrSizing)
-		f:SetScript("OnSizeChanged", function(self)
-			self:SetMaxLines(self:GetHeight() / config.fontsize)
-			self:Clear()
-		end)
+		pr("unlocked.")
+	else
+		pr("can't be configured in combat.")
 	end
 end
 
@@ -559,14 +604,18 @@ local function EndConfigmode()
 		local f = ns.frames[i]
 		f:SetBackdrop(nil)
 		f.fs:Hide()
+		f.fs = nil
 		f.t:Hide()
+		f.t = nil
 		f.d:Hide()
-
+		f.d = nil
+		f.tr = nil
 		f:EnableMouse(false)
 		f:SetScript("OnDragStart", nil)
 		f:SetScript("OnDragStop", nil)
 	end
-	ns:Print("Window positions unsaved, don't forget to reload UI.")
+	ns.locked = true
+	pr("Window positions unsaved, don't forget to reload UI.")
 end
 
 local function StartTestMode()
@@ -587,26 +636,35 @@ local function StartTestMode()
 	
 	for i = 1, #ns.frames do
 		ns.frames[i]:SetScript("OnUpdate", function(self, elapsed)
-			UpdateInterval = random(65, 1000) / 250
-			TimeSinceLastUpdate = TimeSinceLastUpdate + elapsed
-			if TimeSinceLastUpdate > UpdateInterval then
-				if i == 1 then
-					ns.frames[i]:AddMessage("-"..random(100000), 1, random(255) / 255, random(255) / 255)
-				elseif i == 2 then
-					ns.frames[i]:AddMessage("+"..random(50000), .1, random(128, 255) / 255, .1)
-				elseif i == 3 then
-					ns.frames[i]:AddMessage(COMBAT_TEXT_LABEL, random(255) / 255, random(255) / 255, random(255) / 255)
-				elseif i == 4 then
-					local spell, id
-					while( not spell) do
-						id = random(10000)
-						spell = GetSpellInfo(id)
+				UpdateInterval = random(65, 1000) / 250
+				TimeSinceLastUpdate = TimeSinceLastUpdate + elapsed
+				if TimeSinceLastUpdate > UpdateInterval then
+					if i == 1 then
+						ns.frames[i]:AddMessage("-"..random(100000), 1, random(255) / 255, random(255) / 255)
+					elseif i == 2 then
+						ns.frames[i]:AddMessage("+"..random(50000), .1, random(128, 255) / 255, .1)
+					elseif i == 3 then
+						ns.frames[i]:AddMessage(COMBAT_TEXT_LABEL, random(255) / 255, random(255) / 255, random(255) / 255)
+					elseif i == 4 then
+						local msg
+						local icon
+						local color = { }
+						msg = random(40000)
+						if config.icons then
+							local _, _, icon = GetSpellInfo(msg)
+						end
+						if icon then
+							msg = msg .. " \124T" .. icon .. ":" .. config.iconsize .. ":" .. config.iconsize .. ":0:0:64:64:5:59:5:59\124t"
+							color = ns.schoolColor[ns.dmindex[random(#ns.dmindex)]]
+						elseif not config.icons then
+							color = ns.schoolColor[ns.dmindex[random(#ns.dmindex)]]
+						end
+						ns.frames[i]:AddMessage(msg, unpack(color))
 					end
-					dmg(nil, nil, nil, "SPELL_DAMAGE", nil, UnitGUID("pet"), nil, nil, nil, nil, nil, 0, 0, id, nil, 1+random(5), random(50000))
+					TimeSinceLastUpdate = 0
 				end
-				TimeSinceLastUpdate = 0
-			end
-		end) 
+			end)        
+		ns.testmode = true
 	end
 end
 
@@ -616,6 +674,7 @@ local function EndTestMode()
 		ns.frames[i]:Clear()
 	end
 	ns.dmindex = nil
+	ns.testmode = false
 end
 
 -- /AbuCT lock popup dialog
@@ -623,7 +682,8 @@ StaticPopupDialogs["ABUCT_LOCK"] = {
 	text         = "To save AbuCT window positions you need to reload your UI.\n Click "..ACCEPT.." to reload UI.\nClick "..CANCEL.." to do it later.",
 	button1      = ACCEPT,
 	button2      = CANCEL,
-	OnAccept     = function() if not InCombatLockdown() then ReloadUI() end end,
+	OnAccept     = function() if not InCombatLockdown() then ReloadUI() else EndConfigmode() end end,
+	OnCancel     = EndConfigmode,
 	timeout      = 0,
 	whileDead    = 1,
 	hideOnEscape = true,
@@ -633,23 +693,36 @@ StaticPopupDialogs["ABUCT_LOCK"] = {
 -- slash commands
 _G.SLASH_ABUCT1 = "/AbuCT"
 _G.SLASH_ABUCT2 = "/ACT"
-
-local LOCKED = true
-SlashCmdList["ABUCT"] = function()
-
-	if LOCKED then
-		if (not InCombatLockdown()) then
+SlashCmdList["ABUCT"] = function(input)
+	input = string.lower(input)
+	
+	if input == "unlock" then
+		if ns.locked then
 			StartConfigmode()
-			StartTestMode()
-			LOCKED = false
 		else
-			ns:Print("can't be configured in combat.")
+			pr("already unlocked.")
 		end
+		
+	elseif input=="lock" then
+		if ns.locked then
+			pr("already locked.")
+		else
+			StaticPopup_Show("ABUCT_LOCK")
+		end
+		
+	elseif input == "test" then
+		if (ns.testmode) then
+			EndTestMode()
+			pr("test mode disabled.")
+		else
+			StartTestMode()
+			pr("test mode enabled.")
+		end
+		
 	else
-		EndTestMode()
-		EndConfigmode()
-		StaticPopup_Show("ABUCT_LOCK")
-		LOCKED = true
+		pr("use |cffFF0000/AbuCT unlock|r to move and resize frames.")
+		pr("use |cffFF0000/AbuCT lock|r to lock frames.")
+		pr("use |cffFF0000/AbuCT test|r to toggle testmode (sample AbuCT output).")
 	end
 end
 
@@ -777,7 +850,7 @@ if(config.damage)then
 							
 	local AbuCTd = CreateFrame("Frame")
 
-	dmg = function(self, event, ...) 
+	local dmg = function(self, event, ...) 
 		local msg, icon
 		local timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, srcFlags2, destGUID, destName, destFlags, destFlags2 = select(1,...)
 		if (sourceGUID == ns.pguid and destGUID ~= ns.pguid) or (sourceGUID == UnitGUID("pet") and config.petdamage) or (sourceFlags == gflags) then
@@ -937,7 +1010,7 @@ if(config.damage)then
 				else
 					msg = " \124T"..BlankIcon..":"..config.iconsize..":"..config.iconsize..":0:0:64:64:5:59:5:59\124t"
 				end
-				AbuCT4:AddMessage("Interrupted: "..school.n..msg..spamsub, school.r, school.g, school.b)
+				AbuCT4:AddMessage("Int: "..school.n..msg..spamsub, school.r, school.g, school.b)
 			end
 
 		elseif (eventType == 'SPELL_STOLEN') then
@@ -1029,7 +1102,7 @@ end
 if(config.healing)then
 	local select, time = select, time
 	local AbuCTh = CreateFrame("Frame")
-	heal = function(self, event, ...)
+	local heal = function(self, event, ...)
 		local msg, icon
 		local timestamp, eventType, hideCaster, sourceGUID, sourceName, sourceFlags, sourceFlags2, destGUID, destName, destFlags, destFlags2 = select(1, ...)
 		if sourceGUID == ns.pguid or sourceFlags == gflags then
